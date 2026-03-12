@@ -89,24 +89,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ── Step 5: Create .env.test ─────────────────────────
-      # WHY?
-      # CI machine has no .env files (they're gitignored)
-      # Our config.py reads .env.test when ENV=test
-      # We create a minimal one for CI
-      #
-      # No real database in CI → DB values are placeholders
-      # Unit tests don't connect to database so this is fine
-      - name: Create .env.test for CI
-        run: |
-          echo "ENV=test" > .env.test
-          echo "DB_SERVER=localhost" >> .env.test
-          echo "DB_PORT=5432" >> .env.test
-          echo "DB_NAME=retail_etl_test" >> .env.test
-          echo "DB_USER=etl_user" >> .env.test
-          echo "DB_PASSWORD=placeholder" >> .env.test
-          echo "API_BASE_URL=https://fakestoreapi.com" >> .env.test
-
       # ── Step 6: Create logs directory ───────────────────
       # logger.py writes to logs/retail_etl.log
       # That directory must exist or logger crashes
@@ -121,6 +103,12 @@ jobs:
       - name: Run unit tests
         env:
           ENV: test
+          DB_SERVER: localhost
+          DB_PORT: 5432
+          DB_NAME: retail_etl_test
+          DB_USER: etl_user
+          DB_PASSWORD: placeholder
+          API_BASE_URL: https://fakestoreapi.com
         run: |
           pytest tests/unit/ -v --tb=short
 
@@ -131,4 +119,3 @@ jobs:
         if: always()
         run: |
           echo "Unit tests complete"
-          pytest tests/unit/ --tb=no -q

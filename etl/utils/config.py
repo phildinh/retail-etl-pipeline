@@ -18,34 +18,15 @@ from pydantic import Field
 def get_project_root() -> Path:
     return Path(__file__).parent.parent.parent
 
-
-def get_env_file() -> Path:
-    """
-    Read the ENV variable from OS to decide which .env file to load.
-    Defaults to 'dev' if ENV is not set — safe for local development.
-    
-    WHY DEFAULT TO 'dev'?
-    If a developer forgets to set ENV, we want them to hit the dev
-    database, NOT production. Fail safe, not fail dangerous.
-    """
+def get_env_file():
     env = os.environ.get("ENV", "dev").lower()
-
     valid_envs = ["dev", "test", "prod"]
     if env not in valid_envs:
-        raise ValueError(
-            f"ENV='{env}' is not valid. Must be one of: {valid_envs}"
-        )
-
+        raise ValueError(...)
     env_file = get_project_root() / f".env.{env}"
-
     if not env_file.exists():
-        raise FileNotFoundError(
-            f"Environment file not found: {env_file}\n"
-            f"Make sure .env.{env} exists in the project root."
-        )
-
-    return env_file
-
+        return None   # ← this line is critical
+    return str(env_file)
 
 class Settings(BaseSettings):
     """
@@ -73,14 +54,10 @@ class Settings(BaseSettings):
     api_base_url: str = Field(..., alias="API_BASE_URL")
 
     model_config = {
-        # Tell pydantic-settings to read from the correct .env file
-        "env_file": str(get_env_file()),
-        "env_file_encoding": "utf-8",
-        # WHY populate_by_name=True?
-        # Allows us to use either the alias (DB_SERVER)
-        # OR the Python name (db_host) when creating Settings()
-        "populate_by_name": True,
-    }
+            "env_file": get_env_file(),   # ← no str() wrapper, allows None
+            "env_file_encoding": "utf-8",
+            "populate_by_name": True,
+        }
 
     @property
     def db_url(self) -> str:
