@@ -1,0 +1,73 @@
+# docker-compose.yml
+# ═══════════════════════════════════════════════════════════
+# PURPOSE: Run the full stack locally with one command
+#
+# WHY DOCKER COMPOSE?
+# Our pipeline needs TWO things to run:
+#   1. Python application (our ETL code)
+#   2. PostgreSQL database
+#
+# Without compose → start database manually, then app
+# With compose    → docker compose up → both start together
+#
+# docker compose up   → start everything
+# docker compose down → stop everything
+# ═══════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL Database ───────────────────────────────
+  db:
+    image: postgres:15
+    container_name: retail_etl_db
+
+    environment:
+      POSTGRES_USER:     etl_user
+      POSTGRES_PASSWORD: "2011"
+      POSTGRES_DB:       retail_etl_dev
+
+    ports:
+      # host_port:container_port
+      # 5432:5432 → your local apps can still connect
+      - "5433:5432"
+
+    volumes:
+      # Persist data between container restarts
+      # Without this → data lost on every restart ❌
+      - postgres_data:/var/lib/postgresql/data
+
+      # Auto-run DDL on first startup
+      # Any .sql file here runs when container first creates
+      - ./sql/ddl:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etl_user -d retail_etl_dev"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── ETL Pipeline ─────────────────────────────────────
+  etl:
+    build: .
+    container_name: retail_etl_app
+
+    environment:
+      ENV:         dev
+      DB_SERVER:   db        # ← 'db' = service name above
+      DB_PORT:     5432
+      DB_NAME:     retail_etl_dev
+      DB_USER:     etl_user
+      DB_PASSWORD: "2011"
+      API_BASE_URL: https://fakestoreapi.com
+
+    # Wait for database to be healthy before starting
+    # WHY? Pipeline fails if DB isn't ready ❌
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Override default CMD — run once then exit
+    command: ["python", "run_pipeline.py"]
+
+volumes:
+  postgres_data:
