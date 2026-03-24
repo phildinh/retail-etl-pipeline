@@ -369,4 +369,4 @@ Copy `.env.example` and fill in your values. Never commit `.env.*` files.
 ## Author
 
 **Phil Dinh**
-[GitHub](https://github.com/phildinh) · [LinkedIn](https://linkedin.com/in/YOUR_PROFILE)
+[GitHub](https://github.com/phildinh) · [LinkedIn](https://www.linkedin.com/in/phil-dinh/)
